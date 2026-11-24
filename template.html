@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大A祖训 · 高开回吐统计</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; background: #f4f6f9; color: #1a1a1a; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { text-align: center; padding: 18px 0 6px; }
+  header h1 { margin: 0; font-size: 34px; letter-spacing: 4px; }
+  header p { margin: 8px 0 0; color: #666; font-size: 14px; }
+  .card { background: #fff; border-radius: 14px; padding: 18px 20px; margin-top: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  .hint { color: #888; font-size: 12px; margin-top: 8px; }
+  /* 指数多选 */
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid #c9d4e0; border-radius: 999px; padding: 8px 14px; font-size: 15px; cursor: pointer; user-select: none; background: #fff; }
+  .chip input { accent-color: #1f4e79; width: 16px; height: 16px; margin: 0; }
+  .chip.on { border-color: #1f4e79; background: #eaf1f8; font-weight: 600; }
+  /* 时间轴 */
+  .timeline { position: relative; height: 44px; margin: 18px 6px 4px; touch-action: none; }
+  .tl-track { position: absolute; left: 0; right: 0; top: 20px; height: 6px; border-radius: 3px; background: #d7dee6; }
+  .tl-range { position: absolute; top: 20px; height: 6px; border-radius: 3px; background: #1f4e79; }
+  .tl-handle { position: absolute; top: 11px; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 3px solid #1f4e79; cursor: grab; transform: translateX(-50%); box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+  .tl-handle:active { cursor: grabbing; }
+  .tl-labels { display: flex; justify-content: space-between; color: #666; font-size: 13px; margin: 2px 6px 0; }
+  .dates { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .dates label { font-size: 14px; color: #444; }
+  .dates input[type=date] { font-size: 15px; padding: 7px 9px; border: 1.5px solid #c9d4e0; border-radius: 8px; }
+  .dates .days { margin-left: auto; color: #666; font-size: 13px; }
+  /* 参数 */
+  .params { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 640px) { .params { grid-template-columns: 1fr; } }
+  .param label { display: flex; align-items: baseline; gap: 8px; font-size: 15px; font-weight: 600; }
+  .param label input { width: 90px; font-size: 16px; padding: 6px 8px; border: 1.5px solid #c9d4e0; border-radius: 8px; text-align: right; }
+  .param input[type=range] { width: 100%; margin-top: 10px; accent-color: #1f4e79; }
+  .param .range-lbl { display: flex; justify-content: space-between; color: #888; font-size: 12px; }
+  /* 结果表 */
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { padding: 11px 8px; text-align: center; border-bottom: 1px solid #e3e8ee; }
+  th { background: #1f4e79; color: #fff; font-size: 13.5px; line-height: 1.35; }
+  th:first-child, td:first-child { text-align: left; padding-left: 12px; }
+  td.num { font-weight: 700; }
+  tr:nth-child(even) td { background: #f2f6fa; }
+  .idx-name { font-weight: 700; white-space: nowrap; }
+  .idx-code { color: #888; font-size: 12px; font-weight: 400; }
+  .empty { text-align: center; color: #888; padding: 26px 0; }
+  footer { text-align: center; color: #999; font-size: 12.5px; margin-top: 18px; line-height: 1.7; }
+  .pill { display: inline-block; background: #eaf1f8; color: #1f4e79; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>大A祖训</h1>
+    <p>高开之后，大概率要回吐 —— 用十年日K数据验证</p>
+  </header>
+
+  <div class="card">
+    <h2>指数 <span style="color:#888;font-weight:400;font-size:13px;">（可多选）</span></h2>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="card">
+    <h2>统计时间范围 <span style="color:#888;font-weight:400;font-size:13px;">（拖动时间轴两端，或直接改日期）</span></h2>
+    <div class="timeline" id="timeline">
+      <div class="tl-track"></div>
+      <div class="tl-range" id="tlRange"></div>
+      <div class="tl-handle" id="hStart"></div>
+      <div class="tl-handle" id="hEnd"></div>
+    </div>
+    <div class="tl-labels"><span id="lblMin"></span><span id="lblMax"></span></div>
+    <div class="dates">
+      <label>从 <input type="date" id="startDate"></label>
+      <label>到 <input type="date" id="endDate"></label>
+      <span class="days" id="daysInfo"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>参数</h2>
+    <div class="params">
+      <div class="param">
+        <label>高开幅度 <input type="number" id="gapInput" step="0.1" min="0" max="10" value="0.5"> %</label>
+        <input type="range" id="gapSlider" min="0" max="5" step="0.1" value="0.5">
+        <div class="range-lbl"><span>0%</span><span>5%</span></div>
+      </div>
+      <div class="param">
+        <label>回撤幅度 <input type="number" id="pbInput" step="0.1" min="0" max="10" value="0.5"> %</label>
+        <input type="range" id="pbSlider" min="0" max="5" step="0.1" value="0.5">
+        <div class="range-lbl"><span>0%</span><span>5%</span></div>
+      </div>
+    </div>
+    <div class="hint">高开幅度：开盘价高于前收的幅度；回撤幅度：盘中最低价或收盘价低于开盘价的幅度。改数字或拖滑块都会马上重算。</div>
+  </div>
+
+  <div class="card">
+    <h2>统计结果 <span id="resultMeta" style="color:#888;font-weight:400;font-size:13px;"></span></h2>
+    <div id="resultWrap"></div>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+const DATA = __DATA_JSON__;
+
+// ---- 数据整理 ----
+const ORDER = ['000001','399001','399006','000688','000300','000905','000852'];
+const NAMES = DATA.meta.indices;
+// bar: [dateInt YYYYMMDD, open, high, low, close]
+function fmtDate(dint) {
+  const s = String(dint);
+  return s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8);
+}
+function dateToInt(iso) { return parseInt(iso.replace(/-/g, ''), 10); }
+// 全部交易日（并集）
+const dateSet = new Set();
+for (const code of ORDER) { for (const b of (DATA[code] || [])) dateSet.add(b[0]); }
+const ALL_DATES = Array.from(dateSet).sort((a,b) => a-b);
+const N = ALL_DATES.length;
+const MIN_D = ALL_DATES[0], MAX_D = ALL_DATES[N-1];
+
+// ---- 状态 ----
+const state = {
+  selected: new Set(ORDER),
+  startIdx: 0,
+  endIdx: N - 1,
+  gapPct: 0.5,
+  pbPct: 0.5,
+};
+
+// ---- 指数多选 chips ----
+const chipsEl = document.getElementById('chips');
+for (const code of ORDER) {
+  const lab = document.createElement('label');
+  lab.className = 'chip on';
+  lab.innerHTML = '<input type="checkbox" checked> ' + NAMES[code] + ' <span style="color:#888;font-size:12px;">' + code + '</span>';
+  const cb = lab.querySelector('input');
+  cb.addEventListener('change', () => {
+    if (cb.checked) { state.selected.add(code); lab.classList.add('on'); }
+    else { state.selected.delete(code); lab.classList.remove('on'); }
+    render();
+  });
+  chipsEl.appendChild(lab);
+}
+
+// ---- 时间轴 ----
+const tl = document.getElementById('timeline');
+const tlRange = document.getElementById('tlRange');
+const hStart = document.getElementById('hStart');
+const hEnd = document.getElementById('hEnd');
+const startDateEl = document.getElementById('startDate');
+const endDateEl = document.getElementById('endDate');
+document.getElementById('lblMin').textContent = fmtDate(MIN_D);
+document.getElementById('lblMax').textContent = fmtDate(MAX_D);
+startDateEl.min = fmtDate(MIN_D); startDateEl.max = fmtDate(MAX_D);
+endDateEl.min = fmtDate(MIN_D); endDateEl.max = fmtDate(MAX_D);
+
+function idxToPct(i) { return (i / (N - 1)) * 100; }
+function syncTimelineUI() {
+  const s = idxToPct(state.startIdx), e = idxToPct(state.endIdx);
+  hStart.style.left = s + '%';
+  hEnd.style.left = e + '%';
+  tlRange.style.left = s + '%';
+  tlRange.style.width = (e - s) + '%';
+  startDateEl.value = fmtDate(ALL_DATES[state.startIdx]);
+  endDateEl.value = fmtDate(ALL_DATES[state.endIdx]);
+  const days = state.endIdx - state.startIdx + 1;
+  document.getElementById('daysInfo').textContent = '共 ' + days + ' 个交易日';
+}
+function nearestIdx(iso) {
+  const target = dateToInt(iso);
+  let lo = 0, hi = N - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (ALL_DATES[mid] < target) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+startDateEl.addEventListener('change', () => {
+  if (!startDateEl.value) return;
+  let i = nearestIdx(startDateEl.value);
+  if (i > state.endIdx) i = state.endIdx;
+  state.startIdx = i; syncTimelineUI(); render();
+});
+endDateEl.addEventListener('change', () => {
+  if (!endDateEl.value) return;
+  let i = nearestIdx(endDateEl.value);
+  if (i < state.startIdx) i = state.startIdx;
+  state.endIdx = i; syncTimelineUI(); render();
+});
+function dragHandle(handle, isStart) {
+  handle.addEventListener('pointerdown', (ev) => {
+    ev.preventDefault();
+    handle.setPointerCapture(ev.pointerId);
+    const rect = tl.getBoundingClientRect();
+    const move = (e2) => {
+      const x = Math.min(Math.max(e2.clientX - rect.left, 0), rect.width);
+      let idx = Math.round((x / rect.width) * (N - 1));
+      if (isStart) { idx = Math.min(idx, state.endIdx); state.startIdx = idx; }
+      else { idx = Math.max(idx, state.startIdx); state.endIdx = idx; }
+      syncTimelineUI(); render();
+    };
+    const up = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+  });
+  // 点击轨道：把最近的手柄移到点击处
+  tl.addEventListener('pointerdown', (ev) => {
+    if (ev.target === handle) return;
+    const rect = tl.getBoundingClientRect();
+    const x = Math.min(Math.max(ev.clientX - rect.left, 0), rect.width);
+    const idx = Math.round((x / rect.width) * (N - 1));
+    const dS = Math.abs(idx - state.startIdx), dE = Math.abs(idx - state.endIdx);
+    if (dS <= dE) { state.startIdx = Math.min(idx, state.endIdx); }
+    else { state.endIdx = Math.max(idx, state.startIdx); }
+    syncTimelineUI(); render();
+  });
+}
+dragHandle(hStart, true);
+dragHandle(hEnd, false);
+
+// ---- 参数 ----
+const gapInput = document.getElementById('gapInput');
+const gapSlider = document.getElementById('gapSlider');
+const pbInput = document.getElementById('pbInput');
+const pbSlider = document.getElementById('pbSlider');
+function bindParam(input, slider, key) {
+  input.addEventListener('input', () => {
+    let v = parseFloat(input.value);
+    if (isNaN(v)) return;
+    v = Math.max(0, Math.min(10, v));
+    state[key] = v;
+    slider.value = Math.min(5, v);
+    render();
+  });
+  slider.addEventListener('input', () => {
+    const v = parseFloat(slider.value);
+    state[key] = v;
+    input.value = v;
+    render();
+  });
+}
+bindParam(gapInput, gapSlider, 'gapPct');
+bindParam(pbInput, pbSlider, 'pbPct');
+
+// ---- 计算 ----
+function compute(code) {
+  const bars = DATA[code] || [];
+  const startD = ALL_DATES[state.startIdx], endD = ALL_DATES[state.endIdx];
+  const gap = state.gapPct / 100, pb = state.pbPct / 100;
+  let denom = 0, m1 = 0, m2 = 0, m3 = 0;
+  for (let i = 1; i < bars.length; i++) {
+    const d = bars[i][0];
+    if (d < startD || d > endD) continue;
+    const prevClose = bars[i-1][4];
+    const open = bars[i][1], low = bars[i][3], close = bars[i][4];
+    if (open > prevClose * (1 + gap)) {
+      denom++;
+      if (low < open * (1 - pb) || close < open * (1 - pb)) m1++;
+      if ((open - low) / (open - prevClose) > 0.5 || (open - close) / (open - prevClose) > 0.5) m2++;
+      if (close < open) m3++;
+    }
+  }
+  return { denom, m1, m2, m3 };
+}
+function pct(n, d) { return d === 0 ? '—' : (n / d * 100).toFixed(1) + '%'; }
+
+// ---- 渲染结果 ----
+const resultWrap = document.getElementById('resultWrap');
+const resultMeta = document.getElementById('resultMeta');
+function render() {
+  const codes = ORDER.filter(c => state.selected.has(c));
+  const rangeTxt = fmtDate(ALL_DATES[state.startIdx]) + ' 至 ' + fmtDate(ALL_DATES[state.endIdx]);
+  resultMeta.textContent = '（' + rangeTxt + ' · 高开超 ' + state.gapPct + '% · 回撤超 ' + state.pbPct + '%）';
+  if (codes.length === 0) {
+    resultWrap.innerHTML = '<div class="empty">请至少选择一个指数</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>指数</th><th>高开天数<br>(分母)</th><th>最低/收盘价<br>比开盘低超回撤幅度</th><th>涨幅缩小一半以上<br>(回吐超半数缺口)</th><th>收盘价<br>比开盘价低</th></tr></thead><tbody>';
+  for (const code of codes) {
+    const r = compute(code);
+    html += '<tr><td><span class="idx-name">' + NAMES[code] + '</span> <span class="idx-code">' + code + '</span></td>'
+      + '<td>' + r.denom + '</td>'
+      + '<td class="num">' + (r.denom ? r.m1 + ' 天 · ' + pct(r.m1, r.denom) : '—') + '</td>'
+      + '<td class="num">' + (r.denom ? r.m2 + ' 天 · ' + pct(r.m2, r.denom) : '—') + '</td>'
+      + '<td class="num">' + (r.denom ? r.m3 + ' 天 · ' + pct(r.m3, r.denom) : '—') + '</td></tr>';
+  }
+  html += '</tbody></table>';
+  html += '<div class="hint">口径：分母为区间内高开超过设定幅度的天数；“比开盘低超回撤幅度”指当日最低价或收盘价比开盘价低超过回撤幅度；“涨幅缩小一半以上”指开盘缺口被回吐一半以上（最低价或收盘价跌破开盘价与前收的中点）；“收盘价比开盘价低”仅统计收盘价低于开盘价（任意幅度）。最低价或收盘价任一满足即计入（第一、二列）。</div>';
+  resultWrap.innerHTML = html;
+}
+
+document.getElementById('footer').textContent =
+  '数据来源：东财日K（' + NAMES['000001'] + '、' + NAMES['399001'] + '、' + NAMES['399006'] + '、' + NAMES['000688'] + '、' + NAMES['000300'] + '、' + NAMES['000905'] + '、' + NAMES['000852'] + '）'
+  + ' · 数据截至 ' + (DATA.meta.updated || '') + ' · 每周六更新当周日K';
+
+syncTimelineUI();
+render();
+</script>
+</body>
+</html>
