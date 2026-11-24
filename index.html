@@ -348,7 +348,7 @@ function render() {
   let html = '<div class="table-scroll"><table><thead><tr><th>指数</th><th>高开天数</th><th>回吐超幅<span class="hint-dot" data-def="m1">?</span></th><th>回吐过半<span class="hint-dot" data-def="m2">?</span></th><th>收盘回落<span class="hint-dot" data-def="m3">?</span></th></tr></thead><tbody>';
   for (const code of codes) {
     const r = compute(code);
-    html += '<tr><td><span class="idx-name">' + NAMES[code] + '</span> <span class="idx-code">' + code + '</span></td>'
+    html += '<tr><td><span class="idx-name">' + NAMES[code] + '</span></td>'
       + '<td>' + r.denom + '</td>'
       + '<td class="num">' + (r.denom ? '<b>' + pct(r.m1, r.denom) + '</b><br>' + r.m1 + ' 天' : '—') + '</td>'
       + '<td class="num">' + (r.denom ? '<b>' + pct(r.m2, r.denom) + '</b><br>' + r.m2 + ' 天' : '—') + '</td>'
