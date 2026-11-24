@@ -19,6 +19,14 @@
   .chip { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid #c9d4e0; border-radius: 999px; padding: 8px 14px; font-size: 15px; cursor: pointer; user-select: none; background: #fff; }
   .chip input { accent-color: #1f4e79; width: 16px; height: 16px; margin: 0; }
   .chip.on { border-color: #1f4e79; background: #eaf1f8; font-weight: 600; }
+  @media (max-width: 640px) {
+    .chips { display: grid; grid-template-columns: 1fr 1fr; }
+    .chip { justify-content: flex-start; padding: 8px 10px; font-size: 14px; }
+  }
+  /* 时间快捷键 */
+  .presets { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .presets button { border: 1.5px solid #c9d4e0; background: #fff; border-radius: 999px; padding: 7px 16px; font-size: 14px; cursor: pointer; }
+  .presets button.on { border-color: #1f4e79; background: #eaf1f8; font-weight: 700; color: #1f4e79; }
   /* 时间轴 */
   .timeline { position: relative; height: 44px; margin: 18px 6px 4px; touch-action: none; }
   .tl-track { position: absolute; left: 0; right: 0; top: 20px; height: 6px; border-radius: 3px; background: #d7dee6; }
@@ -55,7 +63,7 @@
 <div class="wrap">
   <header>
     <h1>大A祖训</h1>
-    <p>高开之后，大概率要回吐 —— 用十年日K数据验证</p>
+    <p>高开之后，大概率要回吐 —— 用 2015 年以来的日K数据验证</p>
   </header>
 
   <div class="card">
@@ -76,6 +84,13 @@
       <label>从 <input type="date" id="startDate"></label>
       <label>到 <input type="date" id="endDate"></label>
       <span class="days" id="daysInfo"></span>
+    </div>
+    <div class="presets" id="presets">
+      <button data-months="6">近半年</button>
+      <button data-months="12">近一年</button>
+      <button data-months="60">近五年</button>
+      <button data-months="120">近十年</button>
+      <button data-months="">全部</button>
     </div>
   </div>
 
@@ -222,6 +237,43 @@ function dragHandle(handle, isStart) {
 }
 dragHandle(hStart, true);
 dragHandle(hEnd, false);
+
+// ---- 时间快捷键：近半年 / 近一年 / 近五年 / 近十年 / 全部 ----
+const presetBtns = Array.from(document.querySelectorAll('#presets button'));
+function subtractMonths(dint, months) {
+  let y = Math.floor(dint / 10000), m = Math.floor(dint / 100) % 100, d = dint % 100;
+  m -= months;
+  while (m <= 0) { m += 12; y -= 1; }
+  const leap = (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0));
+  const dim = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+  d = Math.min(d, dim);
+  return y * 10000 + m * 100 + d;
+}
+function markPreset(btn) {
+  presetBtns.forEach(b => b.classList.toggle('on', b === btn));
+}
+function setPreset(months, btn) {
+  if (months === null || months === '') { state.startIdx = 0; state.endIdx = N - 1; }
+  else {
+    const target = subtractMonths(ALL_DATES[N - 1], months);
+    state.startIdx = nearestIdx(target);
+    state.endIdx = N - 1;
+  }
+  markPreset(btn || null);
+  syncTimelineUI(); render();
+}
+presetBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = btn.getAttribute('data-months');
+    setPreset(v === '' ? null : parseInt(v, 10), btn);
+  });
+});
+// 手动改时间轴/日期时，取消快捷键的高亮
+['pointerdown', 'change'].forEach(evt => {
+  tl.addEventListener(evt, () => markPreset(null));
+  startDateEl.addEventListener(evt, () => markPreset(null));
+  endDateEl.addEventListener(evt, () => markPreset(null));
+});
 
 // ---- 参数 ----
 const gapInput = document.getElementById('gapInput');

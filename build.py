@@ -4,12 +4,16 @@
   python3 build.py            # 仅用本地 data.json 生成 index.html
   python3 build.py --fetch    # 先从东财拉取最新日K（全量 2016-11-24 至今），再生成
 """
-import json, os, sys, urllib.request
+import json, os, sys, time, urllib.request
+from datetime import date, timedelta
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_JSON = os.path.join(HERE, 'data.json')
 TEMPLATE = os.path.join(HERE, 'template.html')
 OUT = os.path.join(HERE, 'index.html')
+
+# 只取已收盘的完整交易日：截至昨天（周六跑时即为本周五收盘）
+END = (date.today() - timedelta(days=1)).strftime('%Y%m%d')
 
 INDICES = {
     '000001': ('1.000001', '上证指数'),
@@ -26,12 +30,21 @@ def fetch_all():
     latest = ''
     for code, (secid, name) in INDICES.items():
         url = ('https://push2his.eastmoney.com/api/qt/stock/kline/get'
-               f'?secid={secid}&klt=101&fqt=1&beg=20161124&end=29991231'
+               f'?secid={secid}&klt=101&fqt=1&beg=20150101&end={END}'
                '&fields1=f1,f2,f3,f4,f5&fields2=f51,f52,f53,f54,f55,f56,f57,f58')
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            d = json.load(resp)
-        kl = d.get('data', {}).get('klines', [])
+        kl = None
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    d = json.load(resp)
+                kl = d.get('data', {}).get('klines', [])
+                break
+            except Exception as e:
+                print(f'{code} fetch attempt {attempt+1} failed: {e}')
+                time.sleep(3)
+        if kl is None:
+            raise SystemExit(f'fetch failed for {code} after 3 attempts')
         bars = []
         for s in kl:
             p = s.split(',')
