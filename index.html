@@ -14,14 +14,13 @@
   .card { background: #fff; border-radius: 14px; padding: 18px 20px; margin-top: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
   .card h2 { margin: 0 0 12px; font-size: 16px; }
   .hint { color: #888; font-size: 12px; margin-top: 8px; }
-  /* 指数多选 */
-  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid #c9d4e0; border-radius: 999px; padding: 8px 14px; font-size: 15px; cursor: pointer; user-select: none; background: #fff; }
+  /* 指数多选：每行三个，只显示名称 */
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .chip { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px solid #c9d4e0; border-radius: 999px; padding: 8px 10px; font-size: 15px; cursor: pointer; user-select: none; background: #fff; white-space: nowrap; }
   .chip input { accent-color: #1f4e79; width: 16px; height: 16px; margin: 0; }
   .chip.on { border-color: #1f4e79; background: #eaf1f8; font-weight: 600; }
   @media (max-width: 640px) {
-    .chips { display: grid; grid-template-columns: 1fr 1fr; }
-    .chip { justify-content: flex-start; padding: 8px 10px; font-size: 14px; }
+    .chip { padding: 8px 6px; font-size: 14px; }
   }
   /* 时间快捷键 */
   .presets { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
@@ -48,7 +47,7 @@
   /* 结果表 */
   table { width: 100%; border-collapse: collapse; font-size: 15px; }
   th, td { padding: 11px 8px; text-align: center; border-bottom: 1px solid #e3e8ee; }
-  th { background: #1f4e79; color: #fff; font-size: 13.5px; line-height: 1.35; }
+  th { background: #1f4e79; color: #fff; font-size: 13.5px; line-height: 1.2; padding: 7px 8px; white-space: nowrap; }
   th:first-child, td:first-child { text-align: left; padding-left: 12px; }
   td.num { font-weight: 700; }
   tr:nth-child(even) td { background: #f2f6fa; }
@@ -152,7 +151,7 @@ const chipsEl = document.getElementById('chips');
 for (const code of ORDER) {
   const lab = document.createElement('label');
   lab.className = 'chip on';
-  lab.innerHTML = '<input type="checkbox" checked> ' + NAMES[code] + ' <span style="color:#888;font-size:12px;">' + code + '</span>';
+  lab.innerHTML = '<input type="checkbox" checked> ' + NAMES[code];
   const cb = lab.querySelector('input');
   cb.addEventListener('change', () => {
     if (cb.checked) { state.selected.add(code); lab.classList.add('on'); }
@@ -333,14 +332,14 @@ function render() {
     resultWrap.innerHTML = '<div class="empty">请至少选择一个指数</div>';
     return;
   }
-  let html = '<table><thead><tr><th>指数</th><th>高开天数<br>(分母)</th><th>最低/收盘价<br>比开盘低超回撤幅度</th><th>涨幅缩小一半以上<br>(回吐超半数缺口)</th><th>收盘价<br>比开盘价低</th></tr></thead><tbody>';
+  let html = '<table><thead><tr><th>指数</th><th>高开天数</th><th>回吐超幅</th><th>回吐过半</th><th>收盘回落</th></tr></thead><tbody>';
   for (const code of codes) {
     const r = compute(code);
     html += '<tr><td><span class="idx-name">' + NAMES[code] + '</span> <span class="idx-code">' + code + '</span></td>'
       + '<td>' + r.denom + '</td>'
-      + '<td class="num">' + (r.denom ? r.m1 + ' 天 · ' + pct(r.m1, r.denom) : '—') + '</td>'
-      + '<td class="num">' + (r.denom ? r.m2 + ' 天 · ' + pct(r.m2, r.denom) : '—') + '</td>'
-      + '<td class="num">' + (r.denom ? r.m3 + ' 天 · ' + pct(r.m3, r.denom) : '—') + '</td></tr>';
+      + '<td class="num">' + (r.denom ? r.m1 + ' 天 · <b>' + pct(r.m1, r.denom) + '</b>' : '—') + '</td>'
+      + '<td class="num">' + (r.denom ? r.m2 + ' 天 · <b>' + pct(r.m2, r.denom) + '</b>' : '—') + '</td>'
+      + '<td class="num">' + (r.denom ? r.m3 + ' 天 · <b>' + pct(r.m3, r.denom) + '</b>' : '—') + '</td></tr>';
   }
   html += '</tbody></table>';
   html += '<div class="hint">口径：分母为区间内高开超过设定幅度的天数；“比开盘低超回撤幅度”指当日最低价或收盘价比开盘价低超过回撤幅度；“涨幅缩小一半以上”指开盘缺口被回吐一半以上（最低价或收盘价跌破开盘价与前收的中点）；“收盘价比开盘价低”仅统计收盘价低于开盘价（任意幅度）。最低价或收盘价任一满足即计入（第一、二列）。</div>';
