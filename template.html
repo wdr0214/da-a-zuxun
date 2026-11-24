@@ -45,14 +45,24 @@
   .param input[type=range] { width: 100%; margin-top: 10px; accent-color: #1f4e79; }
   .param .range-lbl { display: flex; justify-content: space-between; color: #888; font-size: 12px; }
   /* 结果表 */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { width: 100%; border-collapse: collapse; font-size: 15px; }
-  th, td { padding: 11px 8px; text-align: center; border-bottom: 1px solid #e3e8ee; }
+  th, td { padding: 11px 8px; text-align: center; border-bottom: 1px solid #e3e8ee; white-space: nowrap; }
   th { background: #1f4e79; color: #fff; font-size: 13.5px; line-height: 1.2; padding: 7px 8px; white-space: nowrap; }
   th:first-child, td:first-child { text-align: left; padding-left: 12px; }
-  td.num { font-weight: 700; }
+  td.num { font-weight: 400; }
   tr:nth-child(even) td { background: #f2f6fa; }
   .idx-name { font-weight: 700; white-space: nowrap; }
   .idx-code { color: #888; font-size: 12px; font-weight: 400; }
+  /* 表头圆圈提示与小弹窗 */
+  .hint-dot { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid #fff; color: #fff; font-size: 10px; font-weight: 700; line-height: 1; cursor: pointer; margin-left: 4px; vertical-align: middle; }
+  .def-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.25); display: none; z-index: 50; }
+  .def-backdrop.show { display: block; }
+  .def-pop { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #fff; border-radius: 12px; padding: 20px 20px 16px; width: calc(100% - 56px); max-width: 340px; box-shadow: 0 10px 34px rgba(0,0,0,0.28); z-index: 51; display: none; }
+  .def-pop.show { display: block; }
+  .def-pop h3 { margin: 0 0 8px; font-size: 16px; color: #1f4e79; }
+  .def-pop p { margin: 0; font-size: 14px; line-height: 1.7; color: #333; }
+  .def-pop .close { position: absolute; top: 6px; right: 12px; border: none; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: #999; padding: 4px; }
   .empty { text-align: center; color: #888; padding: 26px 0; }
   footer { text-align: center; color: #999; font-size: 12.5px; margin-top: 18px; line-height: 1.7; }
   .pill { display: inline-block; background: #eaf1f8; color: #1f4e79; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; }
@@ -332,7 +342,7 @@ function render() {
     resultWrap.innerHTML = '<div class="empty">请至少选择一个指数</div>';
     return;
   }
-  let html = '<table><thead><tr><th>指数</th><th>高开天数</th><th>回吐超幅</th><th>回吐过半</th><th>收盘回落</th></tr></thead><tbody>';
+  let html = '<div class="table-scroll"><table><thead><tr><th>指数</th><th>高开天数</th><th>回吐超幅<span class="hint-dot" data-def="m1">?</span></th><th>回吐过半<span class="hint-dot" data-def="m2">?</span></th><th>收盘回落<span class="hint-dot" data-def="m3">?</span></th></tr></thead><tbody>';
   for (const code of codes) {
     const r = compute(code);
     html += '<tr><td><span class="idx-name">' + NAMES[code] + '</span> <span class="idx-code">' + code + '</span></td>'
@@ -341,7 +351,7 @@ function render() {
       + '<td class="num">' + (r.denom ? r.m2 + ' 天 · <b>' + pct(r.m2, r.denom) + '</b>' : '—') + '</td>'
       + '<td class="num">' + (r.denom ? r.m3 + ' 天 · <b>' + pct(r.m3, r.denom) + '</b>' : '—') + '</td></tr>';
   }
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   html += '<div class="hint">口径：分母为区间内高开超过设定幅度的天数；“比开盘低超回撤幅度”指当日最低价或收盘价比开盘价低超过回撤幅度；“涨幅缩小一半以上”指开盘缺口被回吐一半以上（最低价或收盘价跌破开盘价与前收的中点）；“收盘价比开盘价低”仅统计收盘价低于开盘价（任意幅度）。最低价或收盘价任一满足即计入（第一、二列）。</div>';
   resultWrap.innerHTML = html;
 }
@@ -350,8 +360,38 @@ document.getElementById('footer').textContent =
   '数据来源：东财日K（' + NAMES['000001'] + '、' + NAMES['399001'] + '、' + NAMES['399006'] + '、' + NAMES['000688'] + '、' + NAMES['000300'] + '、' + NAMES['000905'] + '、' + NAMES['000852'] + '）'
   + ' · 数据截至 ' + (DATA.meta.updated || '') + ' · 每周六更新当周日K';
 
+// ---- 表头定义小弹窗：点圆圈打开，点弹窗外或 × 关闭 ----
+const DEFS = {
+  m1: { title: '回吐超幅', text: '当日最低价或收盘价比开盘价低超过回撤幅度，任一满足即计入。' },
+  m2: { title: '回吐过半', text: '开盘缺口被回吐一半以上，即最低价或收盘价跌破开盘价与前收的中点。' },
+  m3: { title: '收盘回落', text: '收盘价比开盘价低（任意幅度）。' },
+};
+const defBackdrop = document.getElementById('defBackdrop');
+const defPop = document.getElementById('defPop');
+const defTitle = document.getElementById('defTitle');
+const defText = document.getElementById('defText');
+function openDef(key) {
+  const d = DEFS[key];
+  if (!d) return;
+  defTitle.textContent = d.title;
+  defText.textContent = d.text;
+  defBackdrop.classList.add('show');
+  defPop.classList.add('show');
+}
+function closeDef() {
+  defBackdrop.classList.remove('show');
+  defPop.classList.remove('show');
+}
+document.addEventListener('click', (ev) => {
+  const dot = ev.target.closest ? ev.target.closest('.hint-dot') : null;
+  if (dot) { openDef(dot.getAttribute('data-def')); return; }
+  if (ev.target === defBackdrop || ev.target.id === 'defClose') closeDef();
+});
+
 syncTimelineUI();
 render();
 </script>
+<div class="def-backdrop" id="defBackdrop"></div>
+<div class="def-pop" id="defPop"><button class="close" id="defClose" aria-label="关闭">×</button><h3 id="defTitle"></h3><p id="defText"></p></div>
 </body>
 </html>
