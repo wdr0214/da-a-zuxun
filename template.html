@@ -187,7 +187,8 @@ function syncTimelineUI() {
   document.getElementById('daysInfo').textContent = '共 ' + days + ' 个交易日';
 }
 function nearestIdx(iso) {
-  const target = dateToInt(iso);
+  // iso 可为 "YYYY-MM-DD" 字符串（日期输入框）或 YYYYMMDD 整数（快捷键回推）
+  const target = (typeof iso === 'number') ? iso : dateToInt(iso);
   let lo = 0, hi = N - 1;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (ALL_DATES[mid] < target) lo = mid + 1; else hi = mid; }
   return lo;
