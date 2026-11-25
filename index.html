@@ -65,6 +65,7 @@
   .def-pop .close { position: absolute; top: 6px; right: 12px; border: none; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: #999; padding: 4px; }
   .empty { text-align: center; color: #888; padding: 26px 0; }
   footer { text-align: center; color: #999; font-size: 12.5px; margin-top: 18px; line-height: 1.7; }
+  .visits { text-align: center; color: #999; font-size: 12.5px; margin-top: 4px; }
   .pill { display: inline-block; background: #eaf1f8; color: #1f4e79; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; }
 </style>
 </head>
@@ -126,6 +127,7 @@
   </div>
 
   <footer id="footer"></footer>
+  <div class="visits"><span id="busuanzi_container_site_pv" style="display:none">本站总访问量 <span id="busuanzi_value_site_pv"></span> 次</span><span id="busuanzi_container_site_uv" style="display:none"> · 本站访客数 <span id="busuanzi_value_site_uv"></span> 人</span></div>
 </div>
 
 <div class="def-backdrop" id="defBackdrop"></div>
@@ -394,5 +396,6 @@ document.addEventListener('click', (ev) => {
 syncTimelineUI();
 render();
 </script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 </body>
 </html>
